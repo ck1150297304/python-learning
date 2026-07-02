@@ -7,5 +7,6 @@ def main():
     print(calculator.multiply(4, 8))
     print(calculator.divide(4, 8))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
