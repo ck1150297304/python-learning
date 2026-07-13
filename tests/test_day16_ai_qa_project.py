@@ -3,6 +3,9 @@ from fastapi.testclient import TestClient
 
 from day16_ai_qa_project.main import app
 from day16_ai_qa_project.services import (
+    LLMConfigurationError,
+    LLMRateLimitError,
+    LLMServiceError,
     LLMUnavailableError,
     get_llm_service,
 )
@@ -18,11 +21,14 @@ class FakeLLMService:
         return f"Mock answer for: {question}"
 
 
-class UnavailableLLMService:
+class ErrorLLMService:
     model = "fake-model"
 
+    def __init__(self, error: LLMServiceError) -> None:
+        self.error = error
+
     def ask(self, question: str) -> str:
-        raise LLMUnavailableError("Mock LLM service unavailable")
+        raise self.error
 
 
 @pytest.fixture(autouse=True)
@@ -67,9 +73,42 @@ def test_ask_question_rejects_empty_question() -> None:
     assert response.status_code == 422
 
 
-def test_ask_question_returns_503_when_llm_is_unavailable() -> None:
+def test_ask_question_rejects_too_long_question() -> None:
+    response = client.post(
+        "/ai/ask",
+        json={"question": "a" * 2001},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_status"),
+    [
+        (
+            LLMConfigurationError("Mock configuration error"),
+            503,
+        ),
+        (
+            LLMRateLimitError("Mock rate limit error"),
+            429,
+        ),
+        (
+            LLMUnavailableError("Mock LLM service unavailable"),
+            503,
+        ),
+        (
+            LLMServiceError("Mock upstream service error"),
+            502,
+        ),
+    ],
+)
+def test_ask_question_maps_llm_errors_to_http_status(
+    error: LLMServiceError,
+    expected_status: int,
+) -> None:
     app.dependency_overrides[get_llm_service] = (
-        lambda: UnavailableLLMService()
+        lambda: ErrorLLMService(error)
     )
 
     response = client.post(
@@ -77,7 +116,5 @@ def test_ask_question_returns_503_when_llm_is_unavailable() -> None:
         json={"question": "What is FastAPI?"},
     )
 
-    assert response.status_code == 503
-    assert response.json() == {
-        "detail": "Mock LLM service unavailable"
-    }
+    assert response.status_code == expected_status
+    assert response.json() == {"detail": str(error)}

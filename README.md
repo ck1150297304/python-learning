@@ -8,6 +8,84 @@ This repository records my daily learning progress as I transition from iOS deve
 
 ---
 
+## Featured Project / 核心项目
+
+### Local LLM Q&A API / 本地大模型 AI 问答 API
+
+A structured and testable AI question-answering backend built with FastAPI, Ollama and Qwen3 through an OpenAI-compatible Responses API.
+
+基于 FastAPI 开发的本地大模型问答后端，通过 OpenAI 兼容协议接入 Ollama 和 Qwen3，完成从 HTTP API、参数校验、依赖注入、LLM 服务封装、异常映射到自动化测试的完整工程闭环。
+
+**Tech Stack / 技术栈**
+
+`Python` · `FastAPI` · `Pydantic` · `OpenAI SDK` · `Ollama` · `Qwen3` · `Pytest`
+
+**Core Capabilities / 核心能力**
+
+* `GET /health` health check
+* `POST /ai/ask` AI question-answering endpoint
+* OpenAI-compatible Responses API integration
+* Local LLM inference with Ollama and `qwen3:4b`
+* Environment-based model configuration
+* Route and LLM service decoupling with `Depends` and `Protocol`
+* Structured mapping of LLM errors to HTTP status codes
+* Isolated API testing with `dependency_overrides`
+* Automated coverage for success, validation and upstream error scenarios
+* 16 automated tests passing across the repository
+
+**Architecture / 调用链路**
+
+```text
+Client
+  ↓
+FastAPI Route
+  ↓
+Pydantic Validation
+  ↓
+LLMService Protocol
+  ↓
+OpenAI Python SDK
+  ↓
+Ollama OpenAI-compatible API
+  ↓
+Qwen3 Local Model
+```
+
+**Error Handling / 异常处理**
+
+| Scenario                   | HTTP Status |
+| -------------------------- | ----------: |
+| Invalid request parameters |       `422` |
+| LLM rate limit             |       `429` |
+| LLM configuration error    |       `503` |
+| LLM service unavailable    |       `503` |
+| Upstream LLM service error |       `502` |
+
+**Testing / 自动化测试**
+
+The real LLM service is replaced with fake implementations through FastAPI `dependency_overrides`. Automated tests therefore do not require Ollama, external network access, API keys or real model inference.
+
+测试通过依赖覆盖注入 Fake LLM Service，在不启动 Ollama、不访问外部网络、不使用真实模型的情况下，验证接口成功路径、请求参数校验以及不同 LLM 异常到 HTTP 状态码的映射。
+
+Project source:
+
+* [`day16_ai_qa_project/`](./day16_ai_qa_project/)
+* [`tests/test_day16_ai_qa_project.py`](./tests/test_day16_ai_qa_project.py)
+
+Run the complete test suite:
+
+```bash
+python -m pytest -v
+```
+
+Current result:
+
+```text
+16 passed
+```
+
+---
+
 ## Goal / 学习目标
 
 Build practical Python engineering skills for AI application development.
@@ -91,51 +169,6 @@ Key practices:
 - Tested the API with browser and Swagger UI
 
 ---
-
-## Day 16 Highlight / AI 问答项目
-
-On Day 16, I built a minimal AI question-answering backend using FastAPI, Ollama, Qwen3 and an OpenAI-compatible API.
-
-Day 16 完成了一个可运行、可测试的本地 AI 问答服务，通过 OpenAI 兼容协议接入 Ollama 本地大模型 Qwen3。
-
-Implemented endpoints:
-
-```http
-GET /health
-POST /ai/ask
-```
-
-Example request:
-
-```json
-{
-  "question": "请用简单的话解释 FastAPI 的依赖注入"
-}
-```
-
-Example response:
-
-```json
-{
-  "answer": "FastAPI 的依赖注入可以理解为……",
-  "model": "qwen3:4b"
-}
-```
-
-Key practices:
-
-- Built a structured FastAPI application
-- Separated routes, models and LLM service logic
-- Used Pydantic for request and response validation
-- Used FastAPI `Depends` for dependency injection
-- Integrated Ollama through an OpenAI-compatible Responses API
-- Used the local `qwen3:4b` model for AI inference
-- Managed model configuration through environment variables
-- Mapped LLM configuration, rate limit and availability errors to HTTP status codes
-- Used `dependency_overrides` to test the API without real model calls
-- Verified the complete API flow through Swagger UI
-
-The automated tests do not require an API key, external network access or real LLM inference.
 
 ## Repository Structure / 仓库结构
 
@@ -238,7 +271,7 @@ Use Swagger UI to test the GitHub user endpoint and its query parameters.
 Run the Day 14 tests:
 
 ```bash
-pytest test_day14_fastapi_github_api_v2.py -v
+python -m pytest test_day14_fastapi_github_api_v2.py -v
 ```
 
 ---
@@ -260,7 +293,7 @@ http://127.0.0.1:8000/docs
 Run the Day 15 tests:
 
 ```bash
-pytest tests/test_day15_fastapi_project.py -v
+python -m pytest tests/test_day15_fastapi_project.py -v
 ```
 
 ---
@@ -346,13 +379,13 @@ Example response:
 Run all repository tests:
 
 ```bash
-pytest -v
+python -m pytest -v
 ```
 
 Run only the Day 16 tests:
 
 ```bash
-pytest tests/test_day16_ai_qa_project.py -v
+python -m pytest tests/test_day16_ai_qa_project.py -v
 ```
 
 The tests replace the real LLM service with fake implementations through FastAPI `dependency_overrides`, so they do not require Ollama, external network access or real model inference.
